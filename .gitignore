@@ -1,0 +1,8 @@
+.pio
+CMakeListsPrivate.txt
+cmake-build-*/ 
+/.idea/
+/include/
+/lib/
+/test/
+/CMakeLists.txt
