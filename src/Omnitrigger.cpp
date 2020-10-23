@@ -4,7 +4,7 @@
 
 // Pin definitions
 const byte relay_pins[]  = {3, 4, 5, 6};
-const byte lpt_pins[] = {A4, A3, A5, A2};
+const byte lpt_pins[] = {A3, A2, A1, A0};
 const byte flip_pins[] = {9, 10, 11, 12};
 
 const byte pin_local = 7;     //High for local
@@ -92,7 +92,7 @@ void read_serial()
     {
         //Read bytes until the start character (0x02) is encountered
         int x = Serial.read();
-        if(x == 0x02)
+        if(x == 0x02 || x == 0x24)
         {
             //Clear buffer
             memset(commandBuffer, 0, 16);
@@ -112,20 +112,21 @@ void read_serial()
 
             //Parse for Valve channel
             char* ctrl_seq = nullptr;
-            auto channel = (uint8_t)strtol(commandBuffer, &ctrl_seq, 0) - 1;
+            auto channel = (uint8_t)strtol(commandBuffer, &ctrl_seq, 10) - 1;
+            // Map the channels 5 to 8 onto channels 1 to 4 (this is required as only 5 to 8 can be set via Javalab))
+            channel %= 4;
 
-            //Check if channel is between 1 and 4
-            if(channel<0 || channel > 3)
+            //Check if channel is between 1 and 4 (index 0 to 3)
+            if(channel<0 || channel>3)
             {
                 Serial.print("ER");
                 Serial.print("\n");
 
                 //Debug
-#if debug
+                #if debug
                 Serial.print("Unknown command recieved! ");
-# endif
+                # endif
             }
-
             else
             {
                 //Set Valve state
@@ -138,28 +139,28 @@ void read_serial()
                         Serial.print("\n");
 
                         //Debug
-#if debug
+                        #if debug
                         Serial.print("Channel ");
-                            Serial.print(channel +1);
-                            Serial.print(" set to ");
-                            Serial.println(value);
-#endif
+                        Serial.print(channel +1);
+                        Serial.print(" set to ");
+                        Serial.println(value);
+                        #endif
                     }
                 }
 
-                    //Read valve state
+                //Read valve state
                 else if(strncmp(ctrl_seq, "RSP", 3) == 0)
                 {
                     Serial.print(channel_states[channel]);
                     Serial.print("\n");
 
                     //Debug
-#if debug
+                    #if debug
                     Serial.print("Channel ");
-                        Serial.print(channel + 1);
-                        Serial.print(" set value is ");
-                        Serial.println(channel_states[channel]);
-#endif
+                    Serial.print(channel + 1);
+                    Serial.print(" set value is ");
+                    Serial.println(channel_states[channel]);
+                    #endif
                 }
             }
         }
