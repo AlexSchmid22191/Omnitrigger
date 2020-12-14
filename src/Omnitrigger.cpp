@@ -92,7 +92,7 @@ void read_serial()
     {
         //Read bytes until the start character (0x02) is encountered
         int x = Serial.read();
-        if(x == 0x02 || x == 0x24)
+        if(x == 0x02 || x == '#')
         {
             //Clear buffer
             memset(commandBuffer, 0, 16);
@@ -163,6 +163,17 @@ void read_serial()
                     #endif
                 }
             }
+        }
+        // Minimal mode for Kirsten
+        if(x == ':')
+        {
+            memset(commandBuffer, 0, 16);
+            //Read into buffer
+            Serial.readBytesUntil(0x0D, commandBuffer, 14);
+            auto code = strtol(commandBuffer, nullptr, 10);
+            byte channel = code/10;
+            bool state = (bool)(code % 10);
+            channel_states[channel-1] = state;
         }
     }
 }
