@@ -1,6 +1,7 @@
 #include "Arduino.h"
 
 #define debug false
+#define PULSE_MODE true
 
 // Pin definitions
 const byte relay_pins[]  = {3, 4, 5, 6};
@@ -13,10 +14,15 @@ const byte pin_usb = 8;    //High for USB
 //State array of Valve channels
 boolean channel_states[] = {false, false, false, false};
 
+volatile boolean pulse_flag = false;
+volatile unsigned long pulse_length = 0;
+
+
 //Functions
 void set_channels();
 void read_pins(const byte *input);
 void read_serial();
+void pulse();
 
 void setup()
 {
@@ -40,6 +46,12 @@ void setup()
 
     pinMode(pin_local, INPUT_PULLUP);
     pinMode(pin_usb, INPUT_PULLUP);
+
+    #if PULSE_MODE
+    pinMode(2, INPUT);
+    attachInterrupt(digitalPinToInterrupt(2), pulse, CHANGE);
+    #endif
+
 }
 
 void loop()
@@ -59,6 +71,18 @@ void loop()
         else
         {
             read_serial();
+            #if PULSE_MODE
+            if(pulse_flag)
+            {
+                unsigned long pulse_millis = pulse_length / 1000;
+                // The tens digit indicated relay number
+                unsigned long relay = (pulse_millis + 2) / 10;
+                // The ones digit indicates state: 8-(1)2 --> false, 3-7 --> true
+                boolean state = ((pulse_millis + 2) % 10) > 4;
+                channel_states[relay - 1] = state;
+                pulse_flag = false;
+            }
+            #endif
         }
     }
     //Write the state from the state array to the mosfet pins
@@ -109,6 +133,8 @@ void read_serial()
                     *ptr = '.';
                 }
             }
+
+
 
             //Parse for Valve channel
             char* ctrl_seq = nullptr;
@@ -176,4 +202,11 @@ void read_serial()
             channel_states[channel-1] = state;
         }
     }
+}
+
+void pulse()
+{
+    bool state = digitalRead(2);
+    pulse_length = state ? micros() : micros() - pulse_length;
+    pulse_flag = !state;
 }
